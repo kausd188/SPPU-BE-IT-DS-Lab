@@ -1,0 +1,159 @@
+import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+public class tokenRing {
+    private static Process[] processes;
+    private static volatile int tokenHolder = 0;
+    private static int numProcesses;
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of processes: ");
+        numProcesses = sc.nextInt();
+        processes = new Process[numProcesses];
+
+        System.out.print("Enter sender process ID (0 to " + (numProcesses - 1) + "): ");
+        int sender = sc.nextInt();
+
+        System.out.print("Enter receiver process ID (0 to " + (numProcesses - 1) + "): ");
+        int receiver = sc.nextInt();
+
+        sc.nextLine(); // clear newline
+        System.out.print("Enter data/message to send: ");
+        String data = sc.nextLine();
+
+        // Initialize and start all process threads
+        for (int i = 0; i < numProcesses; i++) {
+            processes[i] = new Process(i);
+            new Thread(processes[i]).start();
+        }
+
+        // Set the token initially with process 0
+        processes[0].hasToken.set(true);
+
+        // Let the sender know it should request the critical section
+        processes[sender].sendDataTo(receiver, data);
+    }
+
+    static class Process implements Runnable {
+        int id;
+        AtomicBoolean hasToken = new AtomicBoolean(false);
+        volatile boolean sendRequest = false;
+        int receiver = -1;
+        String message = "";
+
+        public Process(int id) {
+            this.id = id;
+        }
+
+        public void sendDataTo(int receiver, String message) {
+            this.receiver = receiver;
+            this.message = message;
+            this.sendRequest = true;
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                if (hasToken.get()) {
+                    if (sendRequest) {
+                        try {
+                            enterCriticalSection();
+                            exitCriticalSection();
+                            break; // Finish after sending
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        // Pass token to next process
+                        passToken();
+                    }
+                }
+
+                try {
+                    Thread.sleep(100); // avoid busy wait
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        private void enterCriticalSection() throws InterruptedException {
+            System.out.println("\n>>> Process " + id + " ENTERS critical section.");
+            Thread.sleep(1000);
+
+            System.out.println("Sending data: '" + message + "' to process " + receiver);
+
+            // Forward data from sender to receiver
+            int i = (id + 1) % numProcesses;
+            while (i != receiver) {
+                System.out.println("Data '" + message + "' forwarded by process " + i);
+                i = (i + 1) % numProcesses;
+            }
+
+            System.out.println("Receiver " + receiver + " received data: '" + message + "'");
+        }
+
+        private void exitCriticalSection() {
+            System.out.println("<<< Process " + id + " EXITS critical section.");
+            sendRequest = false;
+            hasToken.set(false);
+            passToken();
+        }
+
+        private void passToken() {
+            int next = (id + 1) % numProcesses;
+            tokenHolder = next;
+            processes[next].receiveToken();
+        }
+
+        public void receiveToken() {
+            hasToken.set(true);
+        }
+    }
+}
+
+/*Related theory-In distributed systems, it is essential to ensure that only one process can access a critical section (CS) at any given time to maintain data consistency and prevent conflicts. This is achieved through mutual exclusion mechanisms. One of the simplest and most efficient approaches to enforce mutual exclusion is the Token Ring Algorithm.
+
+The Token Ring algorithm is designed for a logical ring topology, where each process in the system is arranged in a circular order. Each process knows who its successor is in the ring. A unique token is used to grant permission to enter the critical section. Initially, the token is assigned to one process (typically process 0). The token continuously circulates around the ring from one process to the next.
+
+When a process receives the token, it checks if it wants to enter the critical section. If it does, it holds the token, enters the critical section, performs its operation, and then exits. After leaving the critical section, or if the process is not interested in entering it, the token is passed to the next process in the ring. A key point is that a process cannot re-enter the critical section without first passing the token and then receiving it again in the next cycle.
+
+This design ensures that at most one process has access to the critical section at any given time, thereby enforcing mutual exclusion. Since the token moves in a defined order and all processes get a chance eventually, starvation is avoided.
+
+Algorithm Steps:
+Ring Initialization: Form a logical ring of 'n' processes. Each process is aware of its immediate successor in the ring.
+
+Token Initialization: Assign a special token to one of the processes (commonly process 0).
+
+Token Circulation: The token is passed from one process to its next neighbor.
+
+Critical Section Access:
+
+When a process receives the token, it checks whether it needs to enter the critical section.
+
+If yes, it enters the critical section, completes its task, and then passes the token to the next process.
+
+If no, it immediately forwards the token to its successor.
+
+Repetition: This token passing continues indefinitely, ensuring all processes get a fair chance to access the critical section.
+
+Advantages:
+Mutual Exclusion is Guaranteed: Only the process holding the token can enter the critical section.
+
+No Starvation: Since the token circulates in a fixed order, all processes eventually get the token and hence the chance to enter the critical section.
+
+Simple and Predictable: The logic is straightforward and easy to implement, particularly in systems where processes are connected in a ring-like structure.
+
+Disadvantages:
+Waiting Time: A process might need to wait for all other processes to receive and possibly use the token before getting its turn, which may introduce delays.
+
+Token Loss: If the token is lost (due to a crash or network issue), mutual exclusion cannot be guaranteed unless a new token is regenerated. Detecting a lost token can be difficult because the time between token appearances is not constant.
+
+Process Failures: If a process crashes while holding the token or during token transfer, the system may halt unless failure detection and recovery mechanisms are in place. Requiring an acknowledgment from the next process can help detect such failures and allow the token to be rerouted.
+
+Conclusion:
+The Token Ring Algorithm provides a clear and efficient solution for ensuring mutual exclusion in distributed systems. Its token-based approach eliminates the possibility of race conditions and prevents starvation by guaranteeing every process an equal opportunity to access the critical section. While it has some limitations, such as sensitivity to token loss and delays in token circulation, these issues can be mitigated through enhancements like failure detection and token regeneration. Overall, it remains a reliable and effective method for mutual exclusion.
+
+*/
