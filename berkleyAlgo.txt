@@ -1,0 +1,100 @@
+
+import java.util.*;
+
+public class berkleyAlgo {
+
+    // Simulated machine class
+    static class Machine {
+        int id;
+        int clockTime; // Clock time in seconds (could be represented differently)
+        int timeDifference;
+
+        Machine(int id, int clockTime) {
+            this.id = id;
+            this.clockTime = clockTime;
+        }
+
+        void adjustClock(int offset) {
+            clockTime += offset;
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        // Read number of machines (excluding master)
+        System.out.print("Enter number of slave machines: ");
+        int n = scanner.nextInt();
+
+        // Create list of all machines including the master
+        List<Machine> machines = new ArrayList<>();
+
+        // Add master machine
+        System.out.print("Enter master clock time: ");
+        int masterTime = scanner.nextInt();
+        Machine master = new Machine(0, masterTime);
+        machines.add(master);
+
+        // Add slave machines
+        for (int i = 1; i <= n; i++) {
+            System.out.print("Enter clock time of machine " + i + ": ");
+            int time = scanner.nextInt();
+            machines.add(new Machine(i, time));
+        }
+
+        // Step 1: Master polls all slave clocks and gets time differences
+        int totalDiff = 0;
+        System.out.println("\nCalculating time differences from master...");
+        for (int i = 1; i <= n; i++) {
+            Machine m = machines.get(i);
+            m.timeDifference = m.clockTime - master.clockTime;
+            totalDiff += m.timeDifference;
+            System.out.println("Machine " + m.id + " time difference: " + m.timeDifference);
+        }
+
+        // Add master's own time difference (0)
+        totalDiff += 0; // master.timeDifference = 0
+
+        // Step 2: Calculate average difference (excluding faulty machines if needed)
+        int averageDiff = totalDiff / (n + 1);
+        System.out.println("\nAverage time difference: " + averageDiff);
+
+        // Step 3: Adjust all clocks based on average
+        System.out.println("\nAdjusting clocks...");
+        for (int i = 0; i <= n; i++) {
+            Machine m = machines.get(i);
+            m.adjustClock(-m.timeDifference + averageDiff); // Offset = average - actual diff
+            System.out.println("Machine " + m.id + " new clock time: " + m.clockTime);
+        }
+
+        scanner.close();
+    }
+}
+
+/*Related Theory-In a distributed system, each computer or node maintains its own internal clock, and due to various factors like hardware differences and clock drift, these clocks may not stay synchronized over time. Accurate timekeeping is crucial in distributed systems to ensure event ordering, consistency, fault detection, and coordinated operations. Since there is often no centralized time source, synchronization must be achieved through communication between nodes.
+
+There are two types of clocks in distributed systems. A physical clock refers to the actual hardware clock of a machine, such as the system’s real-time clock. A logical clock, on the other hand, does not measure real-world time but is used to maintain the sequence of events (like Lamport timestamps). Logical clocks are essential when we only care about the order of operations rather than their real-world timing.
+
+One of the widely used algorithms for clock synchronization is the Berkeley Algorithm. Unlike Cristian’s algorithm, which depends on an external time server (such as an NTP server), the Berkeley Algorithm is fully decentralized. It assumes that no node has an accurate time source and instead relies on cooperation among nodes. A single node is elected as the master, which polls all other nodes (slaves) for their clock times, calculates the average time difference, and then instructs each node on how to adjust its clock accordingly.
+The Berkeley Algorithm follows these steps:
+
+A node is chosen as the master using a leader election algorithm. The other nodes in the system become slaves.
+
+The master sends time requests to each of the slave nodes to retrieve their current clock times.
+
+Each slave responds with its local time. The master calculates the round-trip time and uses Cristian’s algorithm to estimate the actual time at each node.
+
+The master then computes the difference between its own clock and each of the slaves’ clocks. It then calculates the average offset, often ignoring significant outliers to improve accuracy.
+
+The master node then sends a message to each slave, not with the new time, but with the amount of adjustment they need to make to synchronize their clocks.
+
+Each slave, as well as the master, adjusts its clock based on the offset received.
+
+Advantages:
+The Berkeley Algorithm offers several benefits. Firstly, it works well in environments without access to external time sources, making it ideal for closed or isolated systems. It is also fault-tolerant to some extent, as the time synchronization process does not depend on a single fixed time server. Additionally, by removing statistical outliers during the average calculation, the algorithm can achieve better accuracy. Because the time is calculated collaboratively, the overall time synchronization is more democratic and reflects the consensus of the system.
+
+Disadvantages:
+Despite its advantages, the Berkeley Algorithm has some limitations. If the master node fails and no backup is pre-configured, the entire synchronization process is disrupted. Network latency and response delays can also affect the accuracy of time calculations. Moreover, abrupt time changes may lead to time inconsistencies or anomalies in event ordering. To maintain synchronization over long periods, the system needs to perform the synchronization periodically, which adds communication overhead.
+
+Conclusion:
+The Berkeley Algorithm is a robust and collaborative approach to clock synchronization in distributed systems. Its decentralized nature makes it especially suitable for systems that lack a central time authority. Although there are potential issues related to master node failure and network delays, these can be mitigated by enhancements such as outlier handling, backup master nodes, and relative time adjustment. Overall, the algorithm remains a valuable solution for maintaining consistent time across distributed environments.*/
