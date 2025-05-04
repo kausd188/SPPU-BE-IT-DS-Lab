@@ -1,0 +1,345 @@
+//Bully Algorithm
+import java.util.*;
+
+public class Bully {
+    int coordinator;
+    int max_processes;
+    boolean processes[];
+
+    public Bully(int max) {
+        max_processes = max;
+        processes = new boolean[max_processes];
+        coordinator = max; // Initially, the process with max ID is the coordinator
+
+        System.out.println("Creating processes..");
+        for (int i = 0; i < max; i++) {
+            processes[i] = true;
+            System.out.println("P" + (i + 1) + " created");
+        }
+        System.out.println("Process P" + coordinator + " is the coordinator");
+    }
+
+    void displayProcesses() {
+        for (int i = 0; i < max_processes; i++) {
+            if (processes[i]) {
+                System.out.println("P" + (i + 1) + " is up");
+            } else {
+                System.out.println("P" + (i + 1) + " is down");
+            }
+        }
+        System.out.println("Process P" + coordinator + " is the coordinator");
+    }
+
+    void upProcess(int process_id) {
+        if (!processes[process_id - 1]) {
+            processes[process_id - 1] = true;
+            System.out.println("Process " + process_id + " is now up.");
+        } else {
+            System.out.println("Process " + process_id + " is already up.");
+        }
+    }
+
+    void downProcess(int process_id) {
+        if (!processes[process_id - 1]) {
+            System.out.println("Process " + process_id + " is already down.");
+        } else {
+            processes[process_id - 1] = false;
+            System.out.println("Process " + process_id + " is down.");
+        }
+    }
+
+    // Running the election process
+    void runElection(int process_id) {
+        System.out.println("\nProcess " + process_id + " initiates the election.");
+        boolean higherProcessExists = false;
+
+        // Check for processes with higher ID
+        for (int i = process_id; i < max_processes; i++) {
+            if (processes[i]) {  // If the process is up
+                if (i + 1 > process_id) {
+                    System.out.println("Process P" + (process_id) + " sends election message to P" + (i + 1));
+                    higherProcessExists = true;
+                    runElection(i + 1);  // Recursively call to check for higher processes
+                    break;
+                }
+            }
+        }
+
+        // If no higher process exists, the current process becomes the coordinator
+        if (!higherProcessExists) {
+            coordinator = process_id;
+            System.out.println("Process P" + process_id + " becomes the coordinator.");
+        }
+    }
+
+    public static void main(String args[]) {
+        Bully bully = null;
+        int max_processes = 0, process_id = 0;
+        int choice = 0;
+        Scanner sc = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("\nBully Algorithm");
+            System.out.println("1. Create processes");
+            System.out.println("2. Display processes");
+            System.out.println("3. Up a process");
+            System.out.println("4. Down a process");
+            System.out.println("5. Run election algorithm");
+            System.out.println("6. Exit Program");
+            System.out.print("Enter your choice: ");
+            choice = sc.nextInt();
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter the number of processes: ");
+                    max_processes = sc.nextInt();
+                    bully = new Bully(max_processes);
+                    break;
+                case 2:
+                    bully.displayProcesses();
+                    break;
+                case 3:
+                    System.out.print("Enter the process number to up: ");
+                    process_id = sc.nextInt();
+                    bully.upProcess(process_id);
+                    break;
+                case 4:
+                    System.out.print("Enter the process number to down: ");
+                    process_id = sc.nextInt();
+                    bully.downProcess(process_id);
+                    break;
+                case 5:
+                    System.out.print("Enter the process number which will perform the election: ");
+                    process_id = sc.nextInt();
+                    bully.runElection(process_id);
+                    bully.displayProcesses();
+                    break;
+                case 6:
+                    System.exit(0);
+                    break;
+                default:
+                    System.out.println("Error in choice. Please try again.");
+                    break;
+            }
+        }
+    }
+}
+
+
+
+
+//Ring Algorithm
+import java.util.*;
+
+public class Ring {
+    int max_processes;
+    int coordinator;
+    boolean[] processes;
+    ArrayList<Integer> pid;
+
+    public Ring(int max) {
+        coordinator = max;
+        max_processes = max;
+        pid = new ArrayList<>();
+        processes = new boolean[max];
+
+        for (int i = 0; i < max; i++) {
+            processes[i] = true;
+            System.out.println("P" + (i + 1) + " created.");
+        }
+        System.out.println("P" + coordinator + " is the coordinator");
+    }
+
+    void displayProcesses() {
+        for (int i = 0; i < max_processes; i++) {
+            if (processes[i])
+                System.out.println("P" + (i + 1) + " is up.");
+            else
+                System.out.println("P" + (i + 1) + " is down.");
+        }
+        System.out.println("P" + coordinator + " is the coordinator");
+    }
+
+    void upProcess(int process_id) {
+        if (!processes[process_id - 1]) {
+            processes[process_id - 1] = true;
+            System.out.println("Process P" + process_id + " is up.");
+        } else {
+            System.out.println("Process P" + process_id + " is already up.");
+        }
+    }
+
+    void downProcess(int process_id) {
+        if (!processes[process_id - 1]) {
+            System.out.println("Process P" + process_id + " is already down.");
+        } else {
+            processes[process_id - 1] = false;
+            System.out.println("Process P" + process_id + " is down.");
+        }
+    }
+
+    void displayArrayList(ArrayList<Integer> pid) {
+        System.out.print("[ ");
+        for (Integer x : pid) {
+            System.out.print(x + " ");
+        }
+        System.out.println("]");
+    }
+
+    void initElection(int process_id) {
+        if (!processes[process_id - 1]) {
+            System.out.println("Process P" + process_id + " is down. Cannot initiate election.");
+            return;
+        }
+
+        pid.clear();
+        int current = process_id % max_processes; // Start from next process
+        pid.add(process_id); // Add initiator
+
+        while (current != (process_id - 1)) {
+            if (processes[current]) {
+                pid.add(current + 1);
+                System.out.print("Process P" + (current + 1) + " sending the list: ");
+                displayArrayList(pid);
+            }
+            current = (current + 1) % max_processes;
+        }
+
+        coordinator = Collections.max(pid);
+        System.out.println("Process P" + process_id + " has declared P" + coordinator + " as the new coordinator");
+    }
+
+    public static void main(String[] args) {
+        Ring ring = null;
+        int max_processes = 0, process_id;
+        int choice;
+        Scanner sc = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("\n--- Ring Algorithm Menu ---");
+            System.out.println("1. Create processes");
+            System.out.println("2. Display processes");
+            System.out.println("3. Up a process");
+            System.out.println("4. Down a process");
+            System.out.println("5. Run election algorithm");
+            System.out.println("6. Exit Program");
+            System.out.print("Enter your choice: ");
+            choice = sc.nextInt();
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter the total number of processes: ");
+                    max_processes = sc.nextInt();
+                    ring = new Ring(max_processes);
+                    break;
+                case 2:
+                    if (ring != null)
+                        ring.displayProcesses();
+                    else
+                        System.out.println("Please create processes first.");
+                    break;
+                case 3:
+                    if (ring != null) {
+                        System.out.print("Enter the process to up: ");
+                        process_id = sc.nextInt();
+                        ring.upProcess(process_id);
+                    } else {
+                        System.out.println("Please create processes first.");
+                    }
+                    break;
+                case 4:
+                    if (ring != null) {
+                        System.out.print("Enter the process to down: ");
+                        process_id = sc.nextInt();
+                        ring.downProcess(process_id);
+                    } else {
+                        System.out.println("Please create processes first.");
+                    }
+                    break;
+                case 5:
+                    if (ring != null) {
+                        System.out.print("Enter the process which will initiate election: ");
+                        process_id = sc.nextInt();
+                        ring.initElection(process_id);
+                    } else {
+                        System.out.println("Please create processes first.");
+                    }
+                    break;
+                case 6:
+                    System.out.println("Exiting...");
+                    System.exit(0);
+                default:
+                    System.out.println("Invalid choice. Try again.");
+            }
+        }
+    }
+}
+
+/*Related Theory:
+Election algorithms are crucial in distributed systems where coordination among processes is essential. In many distributed algorithms, one process is required to act as a coordinator, which can fail or become unresponsive. In such cases, a new coordinator must be elected. For this, two main types of election algorithms are commonly used: the Bully Algorithm and the Ring Algorithm. In both approaches, each process is assigned a unique identifier (ID), and processes are aware of each other's IDs.
+
+Bully Algorithm:
+In the Bully Algorithm, when a process notices the current coordinator has stopped responding, it initiates an election by sending an "ELECTION" message to all processes with higher IDs. If no higher-numbered process responds, the initiating process declares itself the new coordinator. However, if a higher-numbered process responds with an "OK" message, it will take over the election process. Eventually, only the highest-numbered active process remains and broadcasts a "COORDINATOR" message to all others. Notably, if a previously failed process rejoins the system and has the highest ID, it will start an election and become the new coordinator. Hence, the highest ID always wins, which is why the algorithm is termed the "Bully Algorithm."
+
+Ring Algorithm:
+The Ring Algorithm is suitable for distributed systems logically or physically organized in a ring structure. When a process detects that the coordinator is not functioning, it initiates the election by sending an "ELECTION" message containing its process ID to its immediate (alive) successor. As the message traverses the ring, each active process appends its own ID to the message. Once the message returns to the initiator, it identifies the highest ID in the list and sends a "COORDINATOR" message around the ring to announce the new coordinator. This approach ensures leader election in systems where direct communication is only possible between neighboring processes.
+Bully Algorithm – Steps
+Detection:
+A process (say, P) detects that the current coordinator is not responding.
+
+Election Initiation:
+Process P sends an ELECTION message to all processes with higher process IDs than itself.
+
+Response Handling:
+
+If no higher-numbered process responds, P assumes that all of them are down.
+
+P declares itself the coordinator and sends a COORDINATOR message to all other processes.
+
+Higher-ID Response:
+
+If any higher-numbered process replies with an OK message, it means the higher process is alive.
+
+Then, that higher process takes over the election by repeating the same steps (sending ELECTION messages to even higher processes, if any).
+
+Election Propagation:
+This continues until the highest-numbered active process remains and receives no replies.
+
+Coordinator Declaration:
+The highest active process sends a COORDINATOR message to all other processes, announcing itself as the new leader.
+
+Failure Recovery:
+
+If a failed process rejoins and has a higher ID than the current coordinator, it initiates a new election.
+
+Since it has the highest ID, it automatically becomes the new coordinator.
+
+🔁 Ring Algorithm – Steps
+Detection:
+A process (say, P) detects that the coordinator is not responding.
+
+Election Initiation:
+
+Process P creates an ELECTION message with its own process ID.
+
+It sends this message to its next (successor) process in the ring (clockwise).
+
+Message Circulation:
+
+Each process that receives the ELECTION message adds its own process ID to the message and forwards it to its next active neighbor.
+
+This continues until the message comes back to the initiator.
+
+Leader Selection:
+
+The initiator now has a complete list of all active process IDs.
+
+It determines the process with the highest ID as the new coordinator.
+
+Coordinator Announcement:
+
+The initiator then creates a COORDINATOR message with the new leader’s ID.
+
+It sends this message around the ring so that every process updates its coordinator.
+Difference Between Bully and Ring Algorithm:
+The Bully and Ring algorithms differ significantly in structure and communication. In the Bully Algorithm, each process can send messages to all other processes, making it suitable for fully connected networks. It is faster in scenarios where the highest-ID process is active, as it quickly becomes the coordinator. However, it generates more message traffic, especially when multiple processes initiate elections simultaneously. In contrast, the Ring Algorithm works best in ring-structured networks with unidirectional links, where each process communicates only with its immediate neighbor. It generates fewer messages compared to the Bully Algorithm but may be slower, as messages must circulate the entire ring. Additionally, the Bully Algorithm favors higher-ID processes, while the Ring Algorithm ensures that all active processes get a chance to participate in the election process before a leader is selected.*/
